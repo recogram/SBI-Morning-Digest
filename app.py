@@ -12,6 +12,9 @@ def fetch_page(url: str) -> str:
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=TIMEOUT)
     resp.raise_for_status()
+
+    # エンコーディングを強制的にShift_JISに
+    resp.encoding = "shift_jis"
     return resp.text
 
 def main():
