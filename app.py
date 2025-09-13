@@ -2,6 +2,7 @@ import os, time, requests
 from dotenv import load_dotenv
 from parser import parse_sbi_morning
 from slack_post import post_to_slack
+from news_sites import get_market_summaries
 
 load_dotenv()
 
@@ -18,8 +19,14 @@ def fetch_page(url: str) -> str:
     return resp.text
 
 def main():
+    # SBI情報
     html = fetch_page(TARGET_URL)
     summary = parse_sbi_morning(html)
+
+    # 市況サマリー
+    market_summaries = get_market_summaries()
+    summary["market_summaries"] = market_summaries
+
     post_to_slack(summary, TARGET_URL)
 
 if __name__ == "__main__":
