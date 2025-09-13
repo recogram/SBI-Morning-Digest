@@ -3,7 +3,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 TOKEN = os.getenv("SLACK_BOT_TOKEN")
-CHANNEL = os.getenv("SLACK_CHANNEL", "#general")
+CHANNEL = os.getenv("SLACK_CHANNEL")
 
 client = WebClient(token=TOKEN)
 
