@@ -1,33 +1,9 @@
-import os, time, requests
-from dotenv import load_dotenv
-from parser import parse_sbi_morning
+from market_report import build_market_report
 from slack_post import post_to_slack
-from news_sites import get_market_summaries
-
-load_dotenv()
-
-TARGET_URL = os.getenv("TARGET_URL", "https://site1.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl20&_DataStoreID=DSWPLETmgR001Control&_ActionID=DefaultAID&burl=iris_morningInfo&cat1=market&cat2=morningInfo&dir=tl1-minfo%7Ctl2-stmkt%7Ctl3-dcmt&file=index.html&getFlg=on")
-TIMEOUT = int(os.getenv("TIMEOUT", "25"))
-
-def fetch_page(url: str) -> str:
-    headers = {"User-Agent": "Mozilla/5.0"}
-    resp = requests.get(url, headers=headers, timeout=TIMEOUT)
-    resp.raise_for_status()
-
-    # エンコーディングを強制的にShift_JISに
-    resp.encoding = "shift_jis"
-    return resp.text
 
 def main():
-    # SBI情報
-    html = fetch_page(TARGET_URL)
-    summary = parse_sbi_morning(html)
-
-    # 市況サマリー
-    market_summaries = get_market_summaries()
-    summary["market_summaries"] = market_summaries
-
-    post_to_slack(summary, TARGET_URL)
+    report = build_market_report()
+    post_to_slack(report)
 
 if __name__ == "__main__":
     main()
