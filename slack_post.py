@@ -8,19 +8,20 @@ CHANNEL = os.getenv("SLACK_CHANNEL")
 client = WebClient(token=TOKEN)
 
 def post_to_slack(summary: dict, source_url: str):
-    if not TOKEN:
-        raise RuntimeError("SLACK_BOT_TOKEN が未設定です")
-
     text_lines = [f"*SBI モーニング情報まとめ（{summary['date']}）*"]
-    text_lines.append(f"<{source_url}|元記事はこちら>")
+    text_lines.append(f"<{source_url}|SBI元記事はこちら>")
+
+    # SBI要約
     for s in summary.get("sections", []):
         text_lines.append(f"\n• *{s['title']}*")
         for b in s.get("bullets", []):
             text_lines.append(f"    - {b}")
 
-    text = "\n".join(text_lines)
+    # 市況ニュースまとめ
+    if "market_summaries" in summary:
+        text_lines.append("\n*今日の株式市況まとめ*")
+        for s in summary["market_summaries"]:
+            text_lines.append(s)
 
-    try:
-        client.chat_postMessage(channel=CHANNEL, text=text)
-    except SlackApiError as e:
-        print(f"Slack API error: {e.response['error']}")
+    text = "\n".join(text_lines)
+    client.chat_postMessage(channel=CHANNEL, text=text)
