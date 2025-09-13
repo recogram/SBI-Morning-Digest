@@ -6,21 +6,21 @@ def parse_sbi_morning(html: str) -> dict:
     date_text = datetime.now().strftime("%Y年%m月%d日")
 
     sections = []
-    for h in soup.find_all(["h1", "h2", "h3"]):
-        title = h.get_text(" ", strip=True)
-        if not title:
+    # SBI特有の「見出し＋本文」構造を拾う
+    for block in soup.select("div.mtext, div.main-text, p"):
+        text = block.get_text(" ", strip=True)
+        if not text:
             continue
-        body_lines = []
-        for sib in h.find_all_next(limit=10):
-            if sib.name in ["h1", "h2", "h3"]:
-                break
-            if sib.name in ["p", "li"]:
-                txt = sib.get_text(" ", strip=True)
-                if txt:
-                    body_lines.append(txt)
-        if body_lines:
-            sections.append({"title": title, "bullets": body_lines[:3]})
-        if len(sections) >= 5:
-            break
+        # 見出しっぽい部分（太字やhタグ）を分ける
+        if len(text) < 30:  # 短めの文を見出しとみなす
+            sections.append({"title": text, "bullets": []})
+        else:
+            if not sections:
+                sections.append({"title": "マーケット情報", "bullets": []})
+            sections[-1]["bullets"].append(text)
 
-    return {"date": date_text, "sections": sections}
+    # 上位数件だけに絞る
+    for s in sections:
+        s["bullets"] = s["bullets"][:3]
+
+    return {"date": date_text, "sections": sections[:5]}
