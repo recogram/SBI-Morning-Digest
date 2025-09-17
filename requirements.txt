@@ -1,6 +1,2 @@
 requests
-beautifulsoup4
-lxml
-python-dotenv
-playwright
 slack_sdk
