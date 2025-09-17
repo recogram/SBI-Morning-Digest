@@ -16,7 +16,7 @@ BASE = "https://sbi.alpaca-tech.ai"
 def fetch_market_summary(url):
     r = requests.get(url, headers=HEADERS, timeout=15)
     r.encoding = r.apparent_encoding
-    soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "html.parser")
 
     items = []
     for block in soup.select("div.market-condition__summary__about"):
@@ -30,29 +30,37 @@ def fetch_market_summary(url):
         })
     return items
 
-# --- ポジ/ネガ材料ニュース ---
-def fetch_materials(url):
+# --- ニュース（ポジ/ネガ） ---
+def fetch_materials(url, limit=10):
     r = requests.get(url, headers=HEADERS, timeout=15)
     r.encoding = r.apparent_encoding
-    soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "html.parser")
 
     news = []
-    for item in soup.select("div.material__news p"):
-        news.append(item.get_text(strip=True))
-    return news[:5]
+    for item in soup.select("div.open-news-modal")[:limit]:
+        title = item.get_text(strip=True)
+        href = item.get("data-uri")
+        if href and not href.startswith("http"):
+            href = f"{BASE}{href}"
+        news.append({"title": title, "link": href})
+    return news
 
-# --- 銘柄シグナル（買い/売りチャンス） ---
-def fetch_signals(url):
+# --- 銘柄シグナル（買い/売り） ---
+def fetch_signals(url, limit=10):
     r = requests.get(url, headers=HEADERS, timeout=15)
     r.encoding = r.apparent_encoding
-    soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "html.parser")
 
     stocks = []
-    for item in soup.select("div.signal__rankings h4"):
-        stocks.append(item.get_text(strip=True))
-    return stocks[:5]
+    for a in soup.select("div.signal__rankings a")[:limit]:
+        title = a.get_text(" ", strip=True)
+        href = a.get("href")
+        if href and not href.startswith("http"):
+            href = f"{BASE}{href}"
+        stocks.append({"title": title, "link": href})
+    return stocks
 
-# --- 全体レポート作成 ---
+# --- レポート全体 ---
 def build_report():
     today = datetime.now().strftime("%Y-%m-%d")
     urls = {
@@ -84,25 +92,35 @@ def post_to_slack(report: dict):
             lines.append(f"- {b}")
         lines.append(f"→ {item['text']}")
 
-    # ポジティブ
-    lines.append("\n◆ ポジティブニュース")
+    # ポジティブニュース
+    lines.append("\n◆ ポジティブニュース（上位10件）")
     for n in report["ポジティブ"]:
-        lines.append(f"- {n}")
+        if n["link"]:
+            lines.append(f"- <{n['link']}|{n['title']}>")
+        else:
+            lines.append(f"- {n['title']}")
+    lines.append(f"👉 詳細はこちら: {BASE}/news/jp/{today}/morning/good/")
 
-    # ネガティブ
-    lines.append("\n◆ ネガティブニュース")
+    # ネガティブニュース
+    lines.append("\n◆ ネガティブニュース（上位10件）")
     for n in report["ネガティブ"]:
-        lines.append(f"- {n}")
+        if n["link"]:
+            lines.append(f"- <{n['link']}|{n['title']}>")
+        else:
+            lines.append(f"- {n['title']}")
+    lines.append(f"👉 詳細はこちら: {BASE}/news/jp/{today}/morning/bad/")
 
-    # 買い
-    lines.append("\n◆ 買いチャンス銘柄")
+    # 買いチャンス銘柄
+    lines.append("\n◆ 買いチャンス銘柄（上位10件）")
     for s in report["買い"]:
-        lines.append(f"- {s}")
+        lines.append(f"- <{s['link']}|{s['title']}>")
+    lines.append(f"👉 詳細はこちら: {BASE}/trade_chance/jp/buy/{today}/morning")
 
-    # 売り
-    lines.append("\n◆ 売りチャンス銘柄")
+    # 売りチャンス銘柄
+    lines.append("\n◆ 売りチャンス銘柄（上位10件）")
     for s in report["売り"]:
-        lines.append(f"- {s}")
+        lines.append(f"- <{s['link']}|{s['title']}>")
+    lines.append(f"👉 詳細はこちら: {BASE}/trade_chance/jp/sell/{today}/morning")
 
     text = "\n".join(lines)
     client.chat_postMessage(channel=CHANNEL, text=text)
