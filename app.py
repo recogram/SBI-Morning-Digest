@@ -3,6 +3,12 @@ import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from slack_sdk import WebClient
+from datetime import datetime, timedelta
+
+def get_today_date():
+    # JSTに合わせる
+    jst = datetime.utcnow() + timedelta(hours=9)
+    return jst.strftime("%Y-%m-%d")
 
 # ====== Slack設定 ======
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
@@ -62,7 +68,7 @@ def fetch_signals(url, limit=10):
 
 # --- レポート全体 ---
 def build_report():
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = get_today_date()
     urls = {
         "市況": f"{BASE}/{today}/morning",
         "ポジティブ": f"{BASE}/news/jp/{today}/morning/good/",
